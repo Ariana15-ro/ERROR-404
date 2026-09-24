@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Escape from ERROR-404: una misión de supervivencia digital.">
+  <title>ERROR-404 | Escapa de la IA</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section id="start-screen" class="screen start-screen" aria-labelledby="game-title">
+      <div class="terminal-window">
+        <p class="terminal-line" aria-hidden="true">&gt; SYSTEM_BOOT // ERROR-404</p>
+        <h1 id="game-title">ERROR-404</h1>
+        <p class="subtitle">Escapa de la IA</p>
+
+        <form id="start-form" class="start-form">
+          <label for="player-name">Identificación del jugador</label>
+          <div class="input-row">
+            <span aria-hidden="true">&gt;</span>
+            <input
+              id="player-name"
+              name="playerName"
+              type="text"
+              placeholder="introduce tu nombre"
+              maxlength="24"
+              autocomplete="name"
+              required
+            >
+          </div>
+          <button type="submit">INICIAR MISIÓN</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="game-area" class="screen game-area" aria-labelledby="game-area-title" hidden>
+      <header class="hud" aria-label="Estado de la misión">
+        <div class="hud-item">
+          <span class="hud-label">AGENTE</span>
+          <strong id="hud-player">---</strong>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">VIDAS</span>
+          <strong id="hud-lives">3</strong>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">NIVEL</span>
+          <strong id="hud-level">1</strong>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">PUNTUACIÓN</span>
+          <strong id="hud-score">0</strong>
+        </div>
+      </header>
+
+      <div class="game-console" role="status" aria-live="polite">
+        <h2 id="game-area-title">MISIÓN INICIADA</h2>
+        <p id="level-message">Cargando nivel 1...</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
