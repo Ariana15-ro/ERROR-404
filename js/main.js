@@ -7,6 +7,9 @@ class Game {
     this.score = 0;
     this.currentLevel = 1;
     this.levelAttempts = 0;
+    this.timerId = null;
+    this.timeRemaining = 45;
+    this.levelTransitionId = null;
 
     this.startScreen = document.querySelector("#start-screen");
     this.gameArea = document.querySelector("#game-area");
@@ -61,12 +64,23 @@ class Game {
   }
 
   loadLevel(levelNumber) {
+    this.stopTimer();
+    if (this.levelTransitionId !== null) {
+      clearTimeout(this.levelTransitionId);
+      this.levelTransitionId = null;
+    }
+
     this.currentLevel = levelNumber;
     this.levelAttempts = 0;
     this.updateHud();
 
     if (levelNumber === 1) {
       this.renderLockedDoorLevel();
+      return;
+    }
+
+    if (levelNumber === 2) {
+      this.renderBombLevel();
       return;
     }
 
@@ -137,9 +151,11 @@ class Game {
       feedback.className = "level-feedback success";
       input.disabled = true;
       button.disabled = true;
-      this.currentLevel = 2;
-      this.updateHud();
       console.log("Nivel 1 completado. Avanzando al nivel 2.");
+      this.levelTransitionId = setTimeout(() => {
+        this.levelTransitionId = null;
+        this.loadLevel(2);
+      }, 1500);
       return;
     }
 
@@ -159,6 +175,126 @@ class Game {
     feedback.textContent = "❌ ACCESO DENEGADO";
     feedback.className = "level-feedback error";
     input.focus();
+  }
+
+  renderBombLevel() {
+    this.timeRemaining = 45;
+    this.gameConsole.replaceChildren();
+
+    const title = document.createElement("h2");
+    title.textContent = "💣 SISTEMA DE AUTODESTRUCCIÓN";
+
+    const timer = document.createElement("p");
+    timer.id = "bomb-timer";
+    timer.className = "bomb-timer";
+    timer.textContent = "00:45";
+    timer.setAttribute("role", "timer");
+    timer.setAttribute("aria-live", "polite");
+
+    const question = document.createElement("p");
+    question.textContent = "¿Cuánto vale?";
+
+    const equation = document.createElement("p");
+    equation.className = "bomb-equation";
+    equation.textContent = "10 + 5 * 2";
+
+    const answers = document.createElement("div");
+    answers.className = "answer-options";
+
+    [20, 30, 40].forEach((value) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = String(value);
+      button.addEventListener("click", () => this.checkAnswer(value));
+      answers.append(button);
+    });
+
+    const feedback = document.createElement("p");
+    feedback.id = "bomb-feedback";
+    feedback.className = "level-feedback";
+    feedback.setAttribute("role", "status");
+    feedback.setAttribute("aria-live", "polite");
+
+    this.gameConsole.append(title, timer, question, equation, answers, feedback);
+    this.startTimer();
+  }
+
+  startTimer() {
+    this.stopTimer();
+    this.timerId = setInterval(() => {
+      this.timeRemaining -= 1;
+      this.updateBombTimer();
+
+      if (this.timeRemaining <= 0) {
+        this.stopTimer();
+        this.handleExplosion();
+      }
+    }, 1000);
+  }
+
+  stopTimer() {
+    if (this.timerId !== null) {
+      clearInterval(this.timerId);
+      this.timerId = null;
+    }
+  }
+
+  updateBombTimer() {
+    const timer = document.querySelector("#bomb-timer");
+
+    if (!timer) {
+      return;
+    }
+
+    const minutes = Math.floor(this.timeRemaining / 60);
+    const seconds = this.timeRemaining % 60;
+    timer.textContent = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    timer.classList.toggle("timer-danger", this.timeRemaining <= 10);
+  }
+
+  checkAnswer(value) {
+    if (this.timerId === null || this.timeRemaining <= 0) {
+      return;
+    }
+
+    const feedback = document.querySelector("#bomb-feedback");
+
+    if (value === 20) {
+      this.stopTimer();
+      feedback.textContent = "✅ BOMBA DESACTIVADA";
+      feedback.className = "level-feedback success";
+      this.disableAnswerButtons();
+      this.levelTransitionId = setTimeout(() => {
+        this.levelTransitionId = null;
+        this.loadLevel(3);
+      }, 1500);
+      return;
+    }
+
+    feedback.textContent = "❌ RESPUESTA INCORRECTA";
+    feedback.className = "level-feedback error";
+    this.lives = Math.max(0, this.lives - 1);
+    this.updateHud();
+  }
+
+  handleExplosion() {
+    const feedback = document.querySelector("#bomb-feedback");
+
+    if (!feedback) {
+      return;
+    }
+
+    feedback.textContent = "💥 EXPLOSIÓN - SISTEMA DESTRUIDO";
+    feedback.className = "level-feedback error";
+    this.lives = Math.max(0, this.lives - 1);
+    this.updateHud();
+    this.disableAnswerButtons();
+  }
+
+  disableAnswerButtons() {
+    document.querySelectorAll(".answer-options button").forEach((button) => {
+      button.disabled = true;
+    });
   }
 
   renderTemporaryLevelMessage(message) {
