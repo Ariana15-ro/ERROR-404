@@ -53,6 +53,8 @@ class Game {
     this.updateHud();
     this.startScreen.hidden = true;
     this.gameArea.hidden = false;
+    this.gameArea.classList.remove("screen-enter");
+    requestAnimationFrame(() => this.gameArea.classList.add("screen-enter"));
     this.loadLevel(1);
   }
 
@@ -81,6 +83,11 @@ class Game {
 
     if (levelNumber === 2) {
       this.renderBombLevel();
+      return;
+    }
+
+    if (levelNumber === 3) {
+      this.renderTerminalLevel();
       return;
     }
 
@@ -151,6 +158,8 @@ class Game {
       feedback.className = "level-feedback success";
       input.disabled = true;
       button.disabled = true;
+      this.score += 100;
+      this.updateHud();
       console.log("Nivel 1 completado. Avanzando al nivel 2.");
       this.levelTransitionId = setTimeout(() => {
         this.levelTransitionId = null;
@@ -163,6 +172,11 @@ class Game {
     this.lives = Math.max(0, this.lives - 1);
     this.updateHud();
     input.value = "";
+
+    if (this.lives === 0) {
+      this.gameOver();
+      return;
+    }
 
     if (this.levelAttempts >= 3) {
       feedback.textContent = "SISTEMA BLOQUEADO";
@@ -205,7 +219,7 @@ class Game {
       const button = document.createElement("button");
       button.type = "button";
       button.textContent = String(value);
-      button.addEventListener("click", () => this.checkAnswer(value));
+      button.addEventListener("click", () => this.checkAnswer(value, button));
       answers.append(button);
     });
 
@@ -252,7 +266,7 @@ class Game {
     timer.classList.toggle("timer-danger", this.timeRemaining <= 10);
   }
 
-  checkAnswer(value) {
+  checkAnswer(value, button) {
     if (this.timerId === null || this.timeRemaining <= 0) {
       return;
     }
@@ -263,6 +277,8 @@ class Game {
       this.stopTimer();
       feedback.textContent = "✅ BOMBA DESACTIVADA";
       feedback.className = "level-feedback success";
+      this.score += 100;
+      this.updateHud();
       this.disableAnswerButtons();
       this.levelTransitionId = setTimeout(() => {
         this.levelTransitionId = null;
@@ -275,6 +291,11 @@ class Game {
     feedback.className = "level-feedback error";
     this.lives = Math.max(0, this.lives - 1);
     this.updateHud();
+    button.disabled = true;
+
+    if (this.lives === 0) {
+      this.gameOver();
+    }
   }
 
   handleExplosion() {
@@ -288,6 +309,12 @@ class Game {
     feedback.className = "level-feedback error";
     this.lives = Math.max(0, this.lives - 1);
     this.updateHud();
+
+    if (this.lives === 0) {
+      this.gameOver();
+      return;
+    }
+
     this.disableAnswerButtons();
   }
 
@@ -295,6 +322,135 @@ class Game {
     document.querySelectorAll(".answer-options button").forEach((button) => {
       button.disabled = true;
     });
+  }
+
+  renderTerminalLevel() {
+    this.gameConsole.replaceChildren();
+
+    const title = document.createElement("h2");
+    title.textContent = "ERROR-404 TERMINAL";
+
+    const prompt = document.createElement("p");
+    prompt.className = "terminal-prompt";
+    prompt.textContent = "> Introduce contraseña";
+
+    const form = document.createElement("form");
+    form.className = "terminal-form";
+
+    const input = document.createElement("input");
+    input.id = "terminal-password";
+    input.name = "terminalPassword";
+    input.type = "text";
+    input.maxLength = 4;
+    input.inputMode = "numeric";
+    input.autocomplete = "off";
+    input.placeholder = "_ _ _ _";
+    input.required = true;
+    input.autofocus = true;
+    input.setAttribute("aria-label", "Contraseña de cuatro dígitos");
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/\D/g, "").slice(0, 4);
+    });
+
+    const button = document.createElement("button");
+    button.type = "submit";
+    button.textContent = "HACKEAR";
+
+    const hints = document.createElement("ul");
+    hints.className = "terminal-hints";
+    [
+      "La contraseña tiene 4 números",
+      "El primer número es 7",
+      "El último número es 3",
+      "La suma de todos los números es 18"
+    ].forEach((text) => {
+      const hint = document.createElement("li");
+      hint.className = "terminal-hint";
+      hint.textContent = text;
+      hints.append(hint);
+    });
+
+    const feedback = document.createElement("p");
+    feedback.id = "terminal-feedback";
+    feedback.className = "level-feedback";
+    feedback.setAttribute("role", "status");
+    feedback.setAttribute("aria-live", "polite");
+
+    form.append(input, button);
+    this.gameConsole.append(title, prompt, form, hints, feedback);
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      this.checkTerminalPassword(input, button, feedback);
+    });
+
+    input.focus();
+  }
+
+  checkTerminalPassword(input, button, feedback) {
+    if (input.value === "7623") {
+      feedback.textContent = "✅ ACCESO CONCEDIDO - TERMINAL COMPROMETIDA";
+      feedback.className = "level-feedback success";
+      input.disabled = true;
+      button.disabled = true;
+      this.score += 150;
+      this.updateHud();
+      this.levelTransitionId = setTimeout(() => {
+        this.levelTransitionId = null;
+        this.loadLevel(4);
+      }, 1500);
+      return;
+    }
+
+    this.levelAttempts += 1;
+    this.lives = Math.max(0, this.lives - 1);
+    this.updateHud();
+    input.value = "";
+
+    if (this.lives === 0) {
+      this.gameOver();
+      return;
+    }
+
+    if (this.levelAttempts >= 4) {
+      feedback.textContent = "🔒 TERMINAL BLOQUEADA";
+      feedback.className = "level-feedback error";
+      input.disabled = true;
+      button.disabled = true;
+      return;
+    }
+
+    feedback.textContent = "❌ ACCESO DENEGADO";
+    feedback.className = "level-feedback error";
+    input.focus();
+  }
+
+  gameOver() {
+    this.stopTimer();
+
+    if (this.levelTransitionId !== null) {
+      clearTimeout(this.levelTransitionId);
+      this.levelTransitionId = null;
+    }
+
+    this.gameConsole.replaceChildren();
+
+    const title = document.createElement("h2");
+    title.textContent = "💀 MISIÓN FALLIDA - SISTEMA COMPROMETIDO";
+
+    const lives = document.createElement("p");
+    lives.textContent = `VIDAS RESTANTES: ${this.lives}`;
+
+    const score = document.createElement("p");
+    score.textContent = `PUNTUACIÓN FINAL: ${this.score}`;
+
+    const retryButton = document.createElement("button");
+    retryButton.type = "button";
+    retryButton.className = "retry-button";
+    retryButton.textContent = "REINTENTAR";
+    retryButton.addEventListener("click", () => location.reload());
+
+    this.gameConsole.append(title, lives, score, retryButton);
   }
 
   renderTemporaryLevelMessage(message) {
